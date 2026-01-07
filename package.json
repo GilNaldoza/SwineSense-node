@@ -1,0 +1,30 @@
+{
+  "name": "lens-reader-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "dev:ui": "npm run dev --prefix src/ui",
+    "dev:electron": "NODE_ENV=development electron .",
+    "dev": "concurrently \"npm run dev:ui\" \"wait-on tcp:5173 && npm run dev:electron\"",
+    "build:ui": "npm run build --prefix src/ui",
+    "start": "npm run build:ui && electron .",
+    "rebuild": "electron-rebuild",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.2",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "wait-on": "^9.0.3"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "better-sqlite3": "^12.5.0"
+  }
+}
