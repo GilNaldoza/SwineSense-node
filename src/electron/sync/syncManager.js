@@ -34,6 +34,21 @@ const login = async (username, password) => {
   }
 };
 
+const logout = () => {
+  db.setSetting('auth_token', '');
+  // Stop background sync
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+  // Close signal stream
+  if (signalStream) {
+    signalStream.cancel();
+    signalStream = null;
+  }
+  console.log("Logged out locally.");
+};
+
 const performSync = async () => {
   const token = db.getSetting('auth_token');
   if (!token) {
@@ -121,17 +136,22 @@ const performSync = async () => {
           entry_timestamp: l.entry_timestamp,
           entry_method: l.entry_method,
           status: l.status,
-          node_id: nodeId
+          node_id: nodeId,
+          location: l.location || 'Unknown'
         })),
         token
       };
 
       const response = await rpc(client.PushLogs, logBatch);
       
-      if (response.success) {
+      console.log("PushLogs response:", response);
+
+      if (response && response.success) {
         const logIds = localLogs.map(l => l.log_id);
-        db.deleteSyncedLogs(logIds);
-        console.log("Logs pushed and purged locally.");
+        db.markLogsSynced(logIds);
+        console.log("Logs pushed and marked synced locally.");
+      } else {
+        console.warn("Server responded with failure for PushLogs:", response?.message);
       }
     }
   } catch (err) {
@@ -160,7 +180,21 @@ const startSignalListener = () => {
   
   if (!token) return;
 
-  if (signalStream) signalStream.cancel();
+  // Clear any pending retry
+  if (syncTimer) {
+     // Note: syncTimer is for background sync, not signal retry. 
+     // We need a separate timer for signal retry or reuse logic carefully.
+     // But let's just focus on cleaning up the stream.
+  }
+
+  if (signalStream) {
+    // Remove listeners to prevent "error" or "end" from the old stream triggering a retry
+    signalStream.removeAllListeners();
+    try {
+      signalStream.cancel();
+    } catch (e) { /* ignore */ }
+    signalStream = null;
+  }
 
   console.log("Connecting to signal stream...");
   signalStream = client.ListenForSignals({ node_id: nodeId, token });
@@ -174,8 +208,11 @@ const startSignalListener = () => {
   });
 
   signalStream.on('error', (err) => {
+    // Ignore cancelled errors from manual cleanup
+    if (err.code === 1 || err.details === 'Cancelled') return;
+    
     console.error("Signal stream error:", err);
-    // basic reconnect logic could go here (e.g. retry in 10s)
+    // basic reconnect logic
     setTimeout(startSignalListener, 10000);
   });
   
@@ -187,6 +224,7 @@ const startSignalListener = () => {
 
 module.exports = {
   login,
+  logout,
   performSync,
   startBackgroundSync,
   startSignalListener

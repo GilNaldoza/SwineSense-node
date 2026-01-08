@@ -3,6 +3,8 @@ import { UserForm } from "./components/UserForm";
 import { UserProfile } from "./components/UserProfile";
 import { StatusDisplay } from "./components/StatusDisplay";
 import { LoginScreen } from "./components/LoginScreen";
+import { SettingsModal } from "./components/SettingsModal";
+import { Settings } from "lucide-react";
 
 // --- Types ---
 declare global {
@@ -13,6 +15,10 @@ declare global {
       login: (creds: {username: string, password: string}) => Promise<{success: boolean, error?: string}>;
       checkAuth: () => Promise<{authenticated: boolean, nodeId: string}>;
       sync: () => Promise<{success: boolean, error?: string}>;
+      logout: () => Promise<{success: boolean, error?: string}>;
+      logEntry: (entry: any) => Promise<{success: boolean, error?: string}>;
+      getSetting: (key: string) => Promise<string | null>;
+      setSetting: (key: string, value: string) => Promise<{success: boolean}>;
     }
   }
 }
@@ -39,6 +45,7 @@ function App() {
   const [scannedUid, setScannedUid] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [resetDuration, setResetDuration] = useState<number | undefined>(undefined);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Use generic type for timeout compatible with both Node and Browser
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,6 +64,20 @@ function App() {
     }
   };
 
+  const recordEntry = async (user: User) => {
+    if (!user.user_id) return;
+    try {
+      await window.electron.logEntry({
+        userId: user.user_id,
+        entryTimestamp: new Date().toISOString(),
+        entryMethod: 'rfid', 
+        status: 'success'
+      });
+    } catch (err) {
+      console.error("Failed to log entry:", err);
+    }
+  };
+
   const handleReset = () => {
     setCurrentUser(null);
     setScannedUid(null);
@@ -66,7 +87,10 @@ function App() {
     clearAutoReset();
   };
 
-
+  const handleLogout = async () => {
+    await window.electron.logout();
+    setIsAuthenticated(false);
+  };
 
   const handleSaveUser = async (formData: any) => {
     // Convert camelCase form data to snake_case DB schema
@@ -88,15 +112,18 @@ function App() {
         await window.electron.saveUser(userToSave);
         // Show the saved profile briefly
         const savedUser = await window.electron.getUser(scannedUid);
-        setCurrentUser(savedUser);
-        setIsEditing(false);
-        setResetDuration(2000);
-        
-        // Auto-return to reader after showing the profile briefly
-        clearAutoReset();
-        resetTimeoutRef.current = setTimeout(() => {
-          handleReset();
-        }, 2000);
+        if (savedUser) {
+          await recordEntry(savedUser);
+          setCurrentUser(savedUser);
+          setIsEditing(false);
+          setResetDuration(2000);
+          
+          // Auto-return to reader after showing the profile briefly
+          clearAutoReset();
+          resetTimeoutRef.current = setTimeout(() => {
+            handleReset();
+          }, 2000);
+        }
       }
     } catch (err) {
       console.error('Error saving user:', err);
@@ -115,9 +142,8 @@ function App() {
       console.log("Calling electron.getUser with:", uid);
       const user = await window.electron.getUser(uid);
       
-      setStatus('complete'); // Show the results view
-      
       if (user) {
+        await recordEntry(user);
         setCurrentUser(user);
         setIsEditing(false);
         setResetDuration(4000);
@@ -131,6 +157,8 @@ function App() {
         setCurrentUser(null);
         setIsEditing(true);
       }
+      
+      setStatus('complete'); // Show the results view
     } catch (err) {
       console.error('Error fetching user:', err);
       // In case of error, maybe go back to idle?
@@ -184,8 +212,30 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative">
+      {/* Logout Button */}
+      {isAuthenticated && (
+        <div className="absolute top-4 right-4 z-50 flex gap-2">
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="p-2 text-slate-600 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-sm transition-all hover:shadow-md"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 rounded-lg border border-red-200 shadow-sm transition-all hover:shadow-md"
+          >
+            <span className="mb-px">Logout</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          </button>
+        </div>
+      )}
       
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      
+      {/* Main Container */}
       {/* Main Container */}
       <div className="w-full max-w-lg">
         
@@ -200,8 +250,8 @@ function App() {
         {status === 'complete' && scannedUid && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
              {/* Back button for admin convenience */}
-             <button onClick={handleReset} className="mb-4 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                ← Back to Reader
+             <button onClick={handleReset} className="mb-4 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors">
+                <span>←</span> Back to Reader
              </button>
 
              {isEditing ? (

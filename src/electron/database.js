@@ -42,12 +42,35 @@ const initDb = () => {
       entry_timestamp DATETIME NOT NULL,
       entry_method TEXT CHECK(entry_method IN ('rfid', 'manual')) NOT NULL,
       status TEXT CHECK(status IN ('success', 'duplicate', 'error')) DEFAULT 'success' NOT NULL,
+      location TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       is_synced INTEGER DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users (user_id)
     )
   `);
   
+  // Migration for existing tables
+  try {
+    const userColumns = db.prepare("PRAGMA table_info(users)").all();
+    if (!userColumns.some(c => c.name === 'is_synced')) {
+       db.exec("ALTER TABLE users ADD COLUMN is_synced INTEGER DEFAULT 0");
+       console.log("Migrated users table: added is_synced");
+    }
+
+    const logColumns = db.prepare("PRAGMA table_info(entry_logs)").all();
+    if (!logColumns.some(c => c.name === 'is_synced')) {
+       db.exec("ALTER TABLE entry_logs ADD COLUMN is_synced INTEGER DEFAULT 0");
+       console.log("Migrated entry_logs table: added is_synced");
+    }
+    if (!logColumns.some(c => c.name === 'location')) {
+       db.exec("ALTER TABLE entry_logs ADD COLUMN location TEXT");
+       console.log("Migrated entry_logs table: added location");
+    }
+  } catch(e) {
+      console.error("Migration check failed:", e);
+  }
+
+
   console.log("Database initialized at:", dbPath);
 };
 
@@ -168,6 +191,15 @@ const getUnsyncedLogs = () => {
   `).all();
 };
 
+const markLogsSynced = (logIds) => {
+  const stmt = db.prepare('UPDATE entry_logs SET is_synced = 1 WHERE log_id = ?');
+  const transaction = db.transaction((ids) => {
+    for (const id of ids) stmt.run(id);
+  });
+  transaction(logIds);
+};
+
+/*
 const deleteSyncedLogs = (logIds) => {
   const stmt = db.prepare('DELETE FROM entry_logs WHERE log_id = ?');
   const transaction = db.transaction((ids) => {
@@ -175,13 +207,14 @@ const deleteSyncedLogs = (logIds) => {
   });
   transaction(logIds);
 };
+*/
 
 const logEntry = (entry) => {
   const stmt = db.prepare(`
     INSERT INTO entry_logs (
-      user_id, entry_timestamp, entry_method, status
+      user_id, entry_timestamp, entry_method, status, location
     ) VALUES (
-      @userId, @entryTimestamp, @entryMethod, @status
+      @userId, @entryTimestamp, @entryMethod, @status, @location
     )
   `);
   return stmt.run(entry);
@@ -214,5 +247,6 @@ module.exports = {
   getUnsyncedUsers,
   markUsersSynced,
   getUnsyncedLogs,
-  deleteSyncedLogs
+  markLogsSynced
+  // deleteSyncedLogs
 };

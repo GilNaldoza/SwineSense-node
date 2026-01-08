@@ -6,7 +6,7 @@
   "scripts": {
     "dev:ui": "npm run dev --prefix src/ui",
     "dev:electron": "NODE_ENV=development electron .",
-    "dev": "concurrently \"npm run dev:ui\" \"wait-on tcp:5173 && npm run dev:electron\"",
+    "dev": "concurrently \"npm run dev:ui\" \"wait-on tcp:5174 && npm run dev:electron\"",
     "build:ui": "npm run build --prefix src/ui",
     "start": "npm run build:ui && electron .",
     "rebuild": "electron-rebuild",

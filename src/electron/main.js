@@ -16,7 +16,7 @@ const createWindow = () => {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:5174');
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../ui/dist/index.html'));
@@ -77,12 +77,28 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:log-entry', (event, entry) => {
     try {
+      // Inject location from settings if not provided
+      if (!entry.location) {
+        entry.location = database.getSetting('location_name') || 'Main Library';
+      }
       database.logEntry(entry);
+      // Trigger immediate sync to push the new log
+      syncManager.performSync().catch(err => console.error("Post-log sync failed:", err));
       return { success: true };
     } catch (err) {
       console.error("DB Log Error:", err);
       return { success: false, error: err.message };
     }
+  });
+
+  // --- Settings IPC Handlers ---
+  ipcMain.handle('settings:get', (event, key) => {
+    return database.getSetting(key);
+  });
+
+  ipcMain.handle('settings:set', (event, key, value) => {
+    database.setSetting(key, value);
+    return { success: true };
   });
 
   // --- Sync IPC Handlers ---
@@ -96,6 +112,16 @@ app.whenReady().then(() => {
       }
       return { success };
     } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('auth:logout', async () => {
+    try {
+      syncManager.logout();
+      return { success: true };
+    } catch (err) {
+      console.error("Logout Error:", err);
       return { success: false, error: err.message };
     }
   });
