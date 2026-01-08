@@ -14,9 +14,20 @@ The application operates on an **Offline-First** model. It uses a local SQLite d
     *   **Pull:** Downloads new user registrations from the central server.
     *   **Push:** Uploads local entry logs and new/edited users to the central server.
     *   **Signal:** Listens for "Sync Now" commands from the admin server.
+*   **Location Awareness:** Configurable "Location" and "Node ID" via settings. All entries are tagged with the specific library location (e.g., "Main Library", "Graduate Library").
 *   **User Interface:** Modern React-based UI (TailwindCSS) for displaying profiles and registration forms.
 *   **Admin Mode:** Includes a login screen for node authentication and admins to edit/register users directly on the device.
 *   **Smart Reset:** Auto-resets the view after scanning an existing user, but stalls for new users to allow registration.
+
+## ⚙️ Configuration
+
+The Reader Node includes a built-in settings panel to configure the device identity.
+
+1.  Press the **`s`** key on your keyboard while on the main scanning screen.
+2.  The **Settings Modal** will appear.
+3.  **Node ID:** unique identifier for this machine.
+4.  **Location:** Select the physical location (e.g., "Main Library") from the dropdown. This ensures all logs are correctly attributed in the backend statistics.
+5.  **Save:** Settings are persisted locally.
 
 ## 🛠️ Tech Stack
 
