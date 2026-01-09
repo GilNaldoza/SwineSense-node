@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { UserForm } from "./components/UserForm";
 import { UserProfile } from "./components/UserProfile";
 import { StatusDisplay } from "./components/StatusDisplay";
@@ -16,7 +16,7 @@ declare global {
       checkAuth: () => Promise<{authenticated: boolean, nodeId: string}>;
       sync: () => Promise<{success: boolean, error?: string}>;
       logout: () => Promise<{success: boolean, error?: string}>;
-      logEntry: (entry: any) => Promise<{success: boolean, error?: string}>;
+      logEntry: (entry: {userId: number, entryTimestamp: string, entryMethod: string, status: string}) => Promise<{success: boolean, error?: string}>;
       getSetting: (key: string) => Promise<string | null>;
       setSetting: (key: string, value: string) => Promise<{success: boolean}>;
     }
@@ -57,14 +57,14 @@ function App() {
     });
   }, []);
 
-  const clearAutoReset = () => {
+  const clearAutoReset = useCallback(() => {
     if (resetTimeoutRef.current) {
       clearTimeout(resetTimeoutRef.current);
       resetTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const recordEntry = async (user: User) => {
+  const recordEntry = useCallback(async (user: User) => {
     if (!user.user_id) return;
     try {
       await window.electron.logEntry({
@@ -76,23 +76,35 @@ function App() {
     } catch (err) {
       console.error("Failed to log entry:", err);
     }
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setCurrentUser(null);
     setScannedUid(null);
     setIsEditing(false);
     setResetDuration(undefined);
     setStatus('idle');
     clearAutoReset();
-  };
+  }, [clearAutoReset]);
 
   const handleLogout = async () => {
     await window.electron.logout();
     setIsAuthenticated(false);
   };
 
-  const handleSaveUser = async (formData: any) => {
+  interface UserFormData {
+    firstName: string;
+    lastName: string;
+    idNumber: string;
+    email: string;
+    userType: 'student' | 'faculty';
+    college: string;
+    department: string;
+    yearLevel: string;
+    status: 'active' | 'inactive';
+  }
+
+  const handleSaveUser = async (formData: UserFormData) => {
     // Convert camelCase form data to snake_case DB schema
     const userToSave: User = {
       id_number: formData.idNumber,
@@ -132,7 +144,7 @@ function App() {
   };
 
   // --- Scan Processing ---
-  const processScan = async (uid: string) => {
+  const processScan = useCallback(async (uid: string) => {
     clearAutoReset();
 
     setScannedUid(uid);
@@ -164,7 +176,7 @@ function App() {
       // In case of error, maybe go back to idle?
        setStatus('idle');
     }
-  };
+  }, [clearAutoReset, recordEntry, handleReset]);
 
   // --- Keyboard Scanner Listener ---
   // Use a ref to access the latest processScan without resetting the effect/buffer
