@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electron', {
   getUser: (rfid) => ipcRenderer.invoke('db:get-user', rfid),
   saveUser: (user) => ipcRenderer.invoke('db:save-user', user),
+  getPig: (rfid) => ipcRenderer.invoke('db:get-pig', rfid),
+  savePig: (pig) => ipcRenderer.invoke('db:save-pig', pig),
   logEntry: (entry) => ipcRenderer.invoke('db:log-entry', entry),
   login: (creds) => ipcRenderer.invoke('auth:login', creds),
   logout: () => ipcRenderer.invoke('auth:logout'),

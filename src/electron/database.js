@@ -48,6 +48,27 @@ const initDb = () => {
       FOREIGN KEY (user_id) REFERENCES users (user_id)
     )
   `);
+
+  // Create Pigs table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pigs (
+      pig_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rfid_tag TEXT UNIQUE NOT NULL,
+      pig_number TEXT UNIQUE NOT NULL,
+      pig_type TEXT CHECK(pig_type IN ('piglet', 'sow', 'boar', 'gilt')) NOT NULL,
+      sire TEXT,
+      dam TEXT,
+      pen TEXT NOT NULL,
+      health_status TEXT CHECK(health_status IN ('healthy', 'at-risk', 'sick')) DEFAULT 'healthy' NOT NULL,
+      weight REAL,
+      date_of_birth DATETIME NOT NULL,
+      notes TEXT,
+      last_scanned DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_synced INTEGER DEFAULT 0
+    )
+  `);
   
   // Migration for existing tables
   try {
@@ -65,6 +86,12 @@ const initDb = () => {
     if (!logColumns.some(c => c.name === 'location')) {
        db.exec("ALTER TABLE entry_logs ADD COLUMN location TEXT");
        console.log("Migrated entry_logs table: added location");
+    }
+
+    const pigColumns = db.prepare("PRAGMA table_info(pigs)").all();
+    if (pigColumns.length > 0 && !pigColumns.some(c => c.name === 'is_synced')) {
+       db.exec("ALTER TABLE pigs ADD COLUMN is_synced INTEGER DEFAULT 0");
+       console.log("Migrated pigs table: added is_synced");
     }
   } catch(e) {
       console.error("Migration check failed:", e);
@@ -234,6 +261,100 @@ const getAllColleges = () => {
   return db.prepare('SELECT name FROM colleges').all().map(row => row.name);
 };
 
+// --- Pig Helpers ---
+const getPigByRfid = (rfid) => {
+  const stmt = db.prepare('SELECT * FROM pigs WHERE rfid_tag = ?');
+  return stmt.get(rfid);
+};
+
+const createPig = (pig) => {
+  const stmt = db.prepare(`
+    INSERT INTO pigs (
+      rfid_tag, pig_number, pig_type, sire, dam, pen, 
+      health_status, weight, date_of_birth, notes, is_synced
+    ) VALUES (
+      @rfidTag, @pigNumber, @pigType, @sire, @dam, @pen,
+      @healthStatus, @weight, @dateOfBirth, @notes, 0
+    )
+  `);
+  return stmt.run(pig);
+};
+
+const updatePig = (pig) => {
+  const stmt = db.prepare(`
+    UPDATE pigs SET
+      pig_number = @pigNumber,
+      pig_type = @pigType,
+      sire = @sire,
+      dam = @dam,
+      pen = @pen,
+      health_status = @healthStatus,
+      weight = @weight,
+      date_of_birth = @dateOfBirth,
+      notes = @notes,
+      updated_at = CURRENT_TIMESTAMP,
+      is_synced = 0
+    WHERE rfid_tag = @rfidTag
+  `);
+  return stmt.run(pig);
+};
+
+const upsertPigFromSync = (pig) => {
+  // Check if exists
+  const existing = getPigByRfid(pig.rfid_tag);
+  
+  if (existing) {
+    // Update
+    const stmt = db.prepare(`
+      UPDATE pigs SET
+        pig_number = @pig_number,
+        pig_type = @pig_type,
+        sire = @sire,
+        dam = @dam,
+        pen = @pen,
+        health_status = @health_status,
+        weight = @weight,
+        date_of_birth = @date_of_birth,
+        notes = @notes,
+        updated_at = @updated_at,
+        is_synced = 1
+      WHERE rfid_tag = @rfid_tag
+    `);
+    return stmt.run(pig);
+  } else {
+    // Insert
+    const stmt = db.prepare(`
+      INSERT INTO pigs (
+        rfid_tag, pig_number, pig_type, sire, dam, pen,
+        health_status, weight, date_of_birth, notes, updated_at, is_synced
+      ) VALUES (
+        @rfid_tag, @pig_number, @pig_type, @sire, @dam, @pen,
+        @health_status, @weight, @date_of_birth, @notes, @updated_at, 1
+      )
+    `);
+    return stmt.run(pig);
+  }
+};
+
+const bulkUpsertPigs = (pigs) => {
+  const transaction = db.transaction((pigList) => {
+    for (const pig of pigList) upsertPigFromSync(pig);
+  });
+  transaction(pigs);
+};
+
+const getUnsyncedPigs = () => {
+  return db.prepare('SELECT * FROM pigs WHERE is_synced = 0').all();
+};
+
+const markPigsSynced = (rfidTags) => {
+  const stmt = db.prepare('UPDATE pigs SET is_synced = 1 WHERE rfid_tag = ?');
+  const transaction = db.transaction((tags) => {
+    for (const tag of tags) stmt.run(tag);
+  });
+  transaction(rfidTags);
+};
+
 module.exports = {
   initDb,
   getUserByRfid,
@@ -247,6 +368,13 @@ module.exports = {
   getUnsyncedUsers,
   markUsersSynced,
   getUnsyncedLogs,
-  markLogsSynced
+  markLogsSynced,
+  getPigByRfid,
+  createPig,
+  updatePig,
+  upsertPigFromSync,
+  bulkUpsertPigs,
+  getUnsyncedPigs,
+  markPigsSynced
   // deleteSyncedLogs
 };

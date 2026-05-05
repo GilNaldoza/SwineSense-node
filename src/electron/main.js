@@ -75,6 +75,45 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('db:get-pig', (event, rfid) => {
+    return database.getPigByRfid(rfid);
+  });
+
+  ipcMain.handle('db:save-pig', (event, pig) => {
+    try {
+      // Ensure we have the RFID tag regardless of casing
+      const rfid = pig.rfid_tag || pig.rfidTag;
+      
+      // Map keys to match database bind parameters (camelCase) if they are snake_case
+      const pigForDb = {
+        rfidTag: rfid,
+        pigNumber: pig.pig_number || pig.pigNumber,
+        pigType: pig.pig_type || pig.pigType,
+        sire: pig.sire,
+        dam: pig.dam,
+        pen: pig.pen,
+        healthStatus: pig.health_status || pig.healthStatus,
+        weight: pig.weight ? parseFloat(pig.weight) : null,
+        dateOfBirth: pig.date_of_birth || pig.dateOfBirth,
+        notes: pig.notes
+      };
+
+      if (database.getPigByRfid(rfid)) {
+        database.updatePig(pigForDb);
+      } else {
+        database.createPig(pigForDb);
+      }
+      
+      // Trigger immediate sync for this new/updated pig
+      syncManager.performSync().catch(err => console.error("Post-save sync failed:", err));
+
+      return { success: true };
+    } catch (err) {
+      console.error("DB Save Pig Error:", err);
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('db:log-entry', (event, entry) => {
     try {
       // Inject location from settings if not provided
