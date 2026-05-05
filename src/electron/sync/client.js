@@ -15,7 +15,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const lensProto = grpc.loadPackageDefinition(packageDefinition).lens;
 
 // Create the client
-const getClient = (serverAddress = 'localhost:50051') => {
+const getClient = (serverAddress = 'localhost:50060') => {
   return new lensProto.LensSyncService(serverAddress, grpc.credentials.createInsecure());
 };
 

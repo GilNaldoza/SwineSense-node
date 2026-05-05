@@ -2,7 +2,7 @@ const db = require('../database');
 const { getClient } = require('./client');
 
 // TODO: Make this configurable via UI or config file
-const SERVER_ADDRESS = 'localhost:50051';
+const SERVER_ADDRESS = 'localhost:50060';
 const client = getClient(SERVER_ADDRESS);
 let isSyncing = false;
 let syncTimer = null;
