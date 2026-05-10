@@ -17,7 +17,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       const nId = await window.electron.getSetting("node_id");
       const loc = await window.electron.getSetting("location_name");
       setNodeId(nId || "NODE_UNKNOWN");
-      setLocationName(loc || "Main Library");
+      setLocationName(loc || "Farrowing Pen");
       setLoading(false);
     };
     loadSettings();
@@ -105,13 +105,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-slate-50/50 hover:bg-white focus:bg-white cursor-pointer"
               disabled={saving}
             >
-              <option value="Main Library">Main Library</option>
-              <option value="Graduate Library">Graduate Library</option>
-              <option value="Electronic Library">Electronic Library</option>
-              <option value="CEA Library">CEA Library</option>
-              <option value="CSM Library">CSM Library</option>
-              <option value="CITC Library">CITC Library</option>
-              <option value="COT Library">COT Library</option>
+              <option value="Farrowing Pen">Farrowing Pen</option>
+              <option value="Barn A">Barn A</option>
+              <option value="Barn B">Barn B</option>
+              <option value="Quarantine">Quarantine</option>
+              <option value="Weaning Facility">Weaning Facility</option>
+              <option value="Finishing Facility">Finishing Facility</option>
+              <option value="Gestation Barn">Gestation Barn</option>
             </select>
             <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
               <span>•</span> Physical location of this reader
