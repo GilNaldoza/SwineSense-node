@@ -1,20 +1,20 @@
-# LENS Reader Node
+# SwineSense Edge Node
 
-**LENS (Library Entry Management System) - Reader Node**
+**SwineSense (Pig Management System) - Edge Node**
 
-This is the client-side "Edge Node" application for the LENS ecosystem. It is an Electron-based desktop application designed to run on RFID reader stations (e.g., Raspberry Pi or Mini PCs) at library entrances.
+This is the client-side "Edge Node" application for the SwineSense ecosystem. It is an Electron-based desktop application designed to run on RFID reader stations (e.g., Windows tablets, Mini PCs) in barns and farrowing pens.
 
-The application operates on an **Offline-First** model. It uses a local SQLite database to allow instant scanning and logging of students/faculty even without an internet connection. It synchronizes data with the central LENS Server via gRPC when a connection is available.
+The application operates on an **Offline-First** model. It uses a local SQLite database to allow instant scanning and logging of pigs and livestock even without an internet connection. It synchronizes data with the central SwineSense Server via gRPC when a connection is available.
 
 ## ✨ Features
 
 *   **RFID Scanning:** Supports USB HID RFID readers (keyboard emulation).
-*   **Offline Capability:** Fully functional without internet access. Stores user data and logs locally in SQLite.
+*   **Offline Capability:** Fully functional without internet access. Stores pig data and scan logs locally in SQLite.
 *   **Real-time Synchronization:**
-    *   **Pull:** Downloads new user registrations from the central server.
-    *   **Push:** Uploads local entry logs and new/edited users to the central server.
+    *   **Pull:** Downloads new pig registrations from the central server.
+    *   **Push:** Uploads local offline scans and new/edited pigs to the central server.
     *   **Signal:** Listens for "Sync Now" commands from the admin server.
-*   **Location Awareness:** Configurable "Location" and "Node ID" via settings. All entries are tagged with the specific library location (e.g., "Main Library", "Graduate Library").
+*   **Location Awareness:** Configurable "Location" and "Node ID" via settings. All entries are tagged with the specific farm location (e.g., "Farrowing Pen", "Barn A").
 *   **User Interface:** Modern React-based UI (TailwindCSS) for displaying profiles and registration forms.
 *   **Admin Mode:** Includes a login screen for node authentication and admins to edit/register users directly on the device.
 *   **Smart Reset:** Auto-resets the view after scanning an existing user, but stalls for new users to allow registration.
@@ -26,7 +26,7 @@ The Reader Node includes a built-in settings panel to configure the device ident
 1.  Press the **`s`** key on your keyboard while on the main scanning screen.
 2.  The **Settings Modal** will appear.
 3.  **Node ID:** unique identifier for this machine.
-4.  **Location:** Select the physical location (e.g., "Main Library") from the dropdown. This ensures all logs are correctly attributed in the backend statistics.
+4.  **Location:** Select the physical farm location (e.g., "Farrowing Pen") from the dropdown. This ensures all logs are correctly attributed in the backend statistics.
 5.  **Save:** Settings are persisted locally.
 
 ## 🛠️ Tech Stack
