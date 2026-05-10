@@ -236,6 +236,8 @@ const startSignalListener = () => {
   if (signalStream) {
     // Remove listeners to prevent "error" or "end" from the old stream triggering a retry
     signalStream.removeAllListeners();
+    // Catch the 'error' emitted by cancel() so it doesn't crash the app
+    signalStream.on('error', () => {});
     try {
       signalStream.cancel();
     } catch (e) { /* ignore */ }
