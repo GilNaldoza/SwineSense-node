@@ -158,6 +158,52 @@ const performSync = async () => {
     console.error("Error pushing logs:", err);
   }
   
+  // --- 4. Pull Pigs (Downstream) ---
+  try {
+    const lastSyncPigs = db.getSetting('last_sync_pigs_timestamp') || '1970-01-01T00:00:00Z';
+    console.log("Pulling pigs since:", lastSyncPigs);
+    
+    const response = await rpc(client.PullPigs, { last_sync_timestamp: lastSyncPigs, token });
+    const pigs = response.pigs || [];
+    
+    if (pigs.length > 0) {
+      console.log(`Received ${pigs.length} updated pigs.`);
+      db.bulkUpsertPigs(pigs);
+    }
+    
+    db.setSetting('last_sync_pigs_timestamp', new Date().toISOString());
+
+  } catch (err) {
+    console.error("Error pulling pigs:", err);
+  }
+
+  // --- 5. Push Pigs (Upstream) ---
+  try {
+    const localPigs = db.getUnsyncedPigs();
+    if (localPigs.length > 0) {
+      console.log(`Pushing ${localPigs.length} local pig changes...`);
+      
+      const pigList = { pigs: localPigs }; 
+      const metadata = new (require('@grpc/grpc-js').Metadata)();
+      metadata.add('token', token);
+
+      const response = await new Promise((resolve, reject) => {
+          client.PushPigs(pigList, metadata, (err, res) => {
+              if (err) reject(err);
+              else resolve(res);
+          });
+      });
+
+      if (response.success) {
+        const ids = localPigs.map(p => p.rfid_tag);
+        db.markPigsSynced(ids);
+        console.log("Pigs pushed successfully.");
+      }
+    }
+  } catch (err) {
+    console.error("Error pushing pigs:", err);
+  }
+  
   console.log("Sync complete.");
   isSyncing = false;
 };
