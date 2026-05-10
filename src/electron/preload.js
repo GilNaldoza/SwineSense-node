@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electron', {
   getPig: (rfid) => ipcRenderer.invoke('db:get-pig', rfid),
   savePig: (pig) => ipcRenderer.invoke('db:save-pig', pig),
   logEntry: (entry) => ipcRenderer.invoke('db:log-entry', entry),
+  logPigScan: (scan) => ipcRenderer.invoke('db:log-pig-scan', scan),
   login: (creds) => ipcRenderer.invoke('auth:login', creds),
   logout: () => ipcRenderer.invoke('auth:logout'),
   checkAuth: () => ipcRenderer.invoke('auth:check'),

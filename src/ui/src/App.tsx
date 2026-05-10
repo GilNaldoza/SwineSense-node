@@ -27,6 +27,11 @@ declare global {
         entryMethod: string;
         status: string;
       }) => Promise<{ success: boolean; error?: string }>;
+      logPigScan: (scan: {
+        rfidTag: string;
+        timestamp: string;
+        notes?: string;
+      }) => Promise<{ success: boolean; error?: string }>;
       getSetting: (key: string) => Promise<string | null>;
       setSetting: (key: string, value: string) => Promise<{ success: boolean }>;
     };
@@ -117,6 +122,18 @@ function App() {
       });
     } catch (err) {
       console.error("Failed to log entry:", err);
+    }
+  }, []);
+
+  const recordPigScan = useCallback(async (pig: Pig) => {
+    if (!pig.rfid_tag) return;
+    try {
+      await window.electron.logPigScan({
+        rfidTag: pig.rfid_tag,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Failed to log pig scan:", err);
     }
   }, []);
 
@@ -244,6 +261,7 @@ function App() {
           const pig = await window.electron.getPig(uid);
 
           if (pig) {
+            await recordPigScan(pig);
             setCurrentPig(pig);
             setCurrentUser(null); // Clear any user data
             setIsEditing(false);

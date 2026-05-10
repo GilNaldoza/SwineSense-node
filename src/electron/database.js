@@ -70,6 +70,20 @@ const initDb = () => {
     )
   `);
   
+  // Create Pig Scans table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pig_scans (
+      scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rfid_tag TEXT NOT NULL,
+      timestamp DATETIME NOT NULL,
+      location TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_synced INTEGER DEFAULT 0,
+      FOREIGN KEY (rfid_tag) REFERENCES pigs (rfid_tag)
+    )
+  `);
+  
   // Migration for existing tables
   try {
     const userColumns = db.prepare("PRAGMA table_info(users)").all();
@@ -92,6 +106,24 @@ const initDb = () => {
     if (pigColumns.length > 0 && !pigColumns.some(c => c.name === 'is_synced')) {
        db.exec("ALTER TABLE pigs ADD COLUMN is_synced INTEGER DEFAULT 0");
        console.log("Migrated pigs table: added is_synced");
+    }
+    
+    // Auto-create missing pig_scans table if it wasn't caught by IF NOT EXISTS
+    const scanColumns = db.prepare("PRAGMA table_info(pig_scans)").all();
+    if (scanColumns.length === 0) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS pig_scans (
+          scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rfid_tag TEXT NOT NULL,
+          timestamp DATETIME NOT NULL,
+          location TEXT,
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          is_synced INTEGER DEFAULT 0,
+          FOREIGN KEY (rfid_tag) REFERENCES pigs (rfid_tag)
+        )
+      `);
+      console.log("Migrated database: created pig_scans table");
     }
   } catch(e) {
       console.error("Migration check failed:", e);
@@ -355,6 +387,29 @@ const markPigsSynced = (rfidTags) => {
   transaction(rfidTags);
 };
 
+const logPigScan = (scan) => {
+  const stmt = db.prepare(`
+    INSERT INTO pig_scans (
+      rfid_tag, timestamp, location, notes
+    ) VALUES (
+      @rfidTag, @timestamp, @location, @notes
+    )
+  `);
+  return stmt.run(scan);
+};
+
+const getUnsyncedPigScans = () => {
+  return db.prepare('SELECT * FROM pig_scans WHERE is_synced = 0').all();
+};
+
+const markPigScansSynced = (scanIds) => {
+  const stmt = db.prepare('UPDATE pig_scans SET is_synced = 1 WHERE scan_id = ?');
+  const transaction = db.transaction((ids) => {
+    for (const id of ids) stmt.run(id);
+  });
+  transaction(scanIds);
+};
+
 module.exports = {
   initDb,
   getUserByRfid,
@@ -375,6 +430,9 @@ module.exports = {
   upsertPigFromSync,
   bulkUpsertPigs,
   getUnsyncedPigs,
-  markPigsSynced
+  markPigsSynced,
+  logPigScan,
+  getUnsyncedPigScans,
+  markPigScansSynced
   // deleteSyncedLogs
 };

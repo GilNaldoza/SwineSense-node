@@ -203,6 +203,38 @@ const performSync = async () => {
   } catch (err) {
     console.error("Error pushing pigs:", err);
   }
+
+  // --- 6. Push Pig Scans (Upstream) ---
+  try {
+    const localPigScans = db.getUnsyncedPigScans();
+    if (localPigScans.length > 0) {
+      console.log(`Pushing ${localPigScans.length} pig scans...`);
+      
+      const scanBatch = {
+        scans: localPigScans.map(s => ({
+          rfid_tag: s.rfid_tag,
+          timestamp: s.timestamp,
+          location: s.location || 'Unknown',
+          notes: s.notes || ''
+        })),
+        token
+      };
+
+      const response = await rpc(client.PushPigScans, scanBatch);
+      
+      console.log("PushPigScans response:", response);
+
+      if (response && response.success) {
+        const scanIds = localPigScans.map(s => s.scan_id);
+        db.markPigScansSynced(scanIds);
+        console.log("Pig scans pushed and marked synced locally.");
+      } else {
+        console.warn("Server responded with failure for PushPigScans:", response?.message);
+      }
+    }
+  } catch (err) {
+    console.error("Error pushing pig scans:", err);
+  }
   
   console.log("Sync complete.");
   isSyncing = false;

@@ -130,6 +130,22 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('db:log-pig-scan', (event, scan) => {
+    try {
+      // Inject location from settings if not provided
+      if (!scan.location) {
+        scan.location = database.getSetting('location_name') || 'Farrowing Pen';
+      }
+      database.logPigScan(scan);
+      // Trigger immediate sync to push the new log
+      syncManager.performSync().catch(err => console.error("Post-scan sync failed:", err));
+      return { success: true };
+    } catch (err) {
+      console.error("DB Pig Scan Log Error:", err);
+      return { success: false, error: err.message };
+    }
+  });
+
   // --- Settings IPC Handlers ---
   ipcMain.handle('settings:get', (event, key) => {
     return database.getSetting(key);
