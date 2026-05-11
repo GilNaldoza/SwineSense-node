@@ -83,9 +83,9 @@ export function UserForm({
   onSave,
   onCancel,
 }: UserFormProps) {
-  // Determine if this is user or pig data
+  // In SwineSense, all new unknown RFIDs belong to pigs by default.
   const isPigData =
-    initialData && ("pig_number" in initialData || "pig_type" in initialData);
+    !initialData || ("pig_number" in initialData || "pig_type" in initialData);
 
   const [userFormData, setUserFormData] = useState({
     firstName: (initialData as UserInitialData)?.first_name || "",
