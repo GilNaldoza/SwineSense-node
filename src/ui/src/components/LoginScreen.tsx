@@ -65,11 +65,11 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               <Lock size={40} strokeWidth={2} className="drop-shadow-lg" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 tracking-tight">
-            Node Login
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-pink-600 bg-clip-text text-transparent mb-2 tracking-tight">
+            SwineSense
           </h1>
           <p className="text-slate-600 text-sm font-medium">
-            Authenticate this reader node
+            Sign in to start scanning
           </p>
         </div>
 
@@ -174,7 +174,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               <Server size={14} className="text-blue-600" />
             </div>
             <span className="font-medium">
-              Connects to Central LENS Server via gRPC
+              Connects to SwineSense Backend
             </span>
           </div>
         </div>

@@ -18,7 +18,7 @@ declare global {
         username: string;
         password: string;
       }) => Promise<{ success: boolean; error?: string }>;
-      checkAuth: () => Promise<{ authenticated: boolean; nodeId: string }>;
+      checkAuth: () => Promise<{ authenticated: boolean; nodeId: string; loggedInUser: string }>;
       sync: () => Promise<{ success: boolean; error?: string }>;
       logout: () => Promise<{ success: boolean; error?: string }>;
       logEntry: (entry: {
@@ -93,6 +93,7 @@ function App() {
     undefined,
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<string>("");
 
   // Use generic type for timeout compatible with both Node and Browser
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,6 +102,7 @@ function App() {
     // Check authentication on mount
     window.electron.checkAuth().then((res) => {
       setIsAuthenticated(res.authenticated);
+      if (res.loggedInUser) setLoggedInUser(res.loggedInUser);
     });
   }, []);
 
@@ -238,40 +240,38 @@ function App() {
       clearAutoReset();
 
       setScannedUid(uid);
-      // Optional: show scanning state briefly if needed, but for now direct to result
 
       try {
         console.log("Checking RFID:", uid);
 
-        // First check if it's a user
-        const user = await window.electron.getUser(uid);
+        // Check pigs FIRST (SwineSense system takes priority)
+        const pig = await window.electron.getPig(uid);
 
-        if (user) {
-          await recordEntry(user);
-          setCurrentUser(user);
-          setCurrentPig(null); // Clear any pig data
+        if (pig) {
+          await recordPigScan(pig);
+          setCurrentPig(pig);
+          setCurrentUser(null);
           setIsEditing(false);
           setResetDuration(4000);
-          // Auto-reset for existing users only
           resetTimeoutRef.current = setTimeout(() => {
             handleReset();
           }, 4000);
         } else {
-          // Check if it's a pig
-          const pig = await window.electron.getPig(uid);
+          // Not a pig — check if it's an old LENS user
+          const user = await window.electron.getUser(uid);
 
-          if (pig) {
-            await recordPigScan(pig);
-            setCurrentPig(pig);
-            setCurrentUser(null); // Clear any user data
-            setIsEditing(false);
-            setResetDuration(4000);
-            // Auto-reset for existing pigs
-            resetTimeoutRef.current = setTimeout(() => {
-              handleReset();
-            }, 4000);
+          if (user) {
+            // LENS user found — but this is SwineSense now.
+            // Treat as a new pig: show pig registration form with RFID pre-filled.
+            // The old LENS data stays in the users table but the scanner
+            // now routes everything through the pig workflow.
+            console.log("LENS user found for RFID, routing to pig registration:", uid);
+            setCurrentUser(null);
+            setCurrentPig(null);
+            setResetDuration(undefined);
+            setIsEditing(true);
           } else {
-            // New entity (could be user or pig)
+            // Completely new entity — show pig registration form
             setResetDuration(undefined);
             setCurrentUser(null);
             setCurrentPig(null);
@@ -279,14 +279,13 @@ function App() {
           }
         }
 
-        setStatus("complete"); // Show the results view
+        setStatus("complete");
       } catch (err) {
-        console.error("Error fetching user:", err);
-        // In case of error, maybe go back to idle?
+        console.error("Error processing scan:", err);
         setStatus("idle");
       }
     },
-    [clearAutoReset, recordEntry, handleReset],
+    [clearAutoReset, recordPigScan, handleReset],
   );
 
   // --- Keyboard Scanner Listener ---
@@ -342,9 +341,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative">
-      {/* Logout Button */}
+      {/* Header Bar */}
       {isAuthenticated && (
-        <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between">
+          {/* Logged-in user display */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+            <div className="w-7 h-7 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+              {loggedInUser ? loggedInUser.charAt(0).toUpperCase() : "?"}
+            </div>
+            <span className="text-sm font-medium text-slate-700">{loggedInUser || "Unknown"}</span>
+          </div>
+          <div className="flex gap-2">
           <button
             onClick={() => setShowSettings(true)}
             className="p-2 text-slate-600 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-sm transition-all hover:shadow-md"
@@ -373,6 +380,7 @@ function App() {
               <line x1="21" x2="9" y1="12" y2="12" />
             </svg>
           </button>
+          </div>
         </div>
       )}
 

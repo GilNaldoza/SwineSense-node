@@ -18,16 +18,27 @@ const rpc = (method, ...args) => {
   });
 };
 
+const BACKEND_URL = 'http://localhost:3000';
+
 const login = async (username, password) => {
-  const nodeId = db.getSetting('node_id') || 'NODE_UNKNOWN';
   try {
-    const response = await rpc(client.Login, { username, password, node_id: nodeId });
-    if (response.success) {
-      db.setSetting('auth_token', response.token);
-      return true;
-    } else {
-      throw new Error(response.message);
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed');
     }
+
+    // Store auth token and user info
+    db.setSetting('auth_token', data.token);
+    db.setSetting('logged_in_user', data.user?.fullName || data.user?.username || username);
+    db.setSetting('logged_in_username', data.user?.username || username);
+    return true;
   } catch (err) {
     console.error("Login failed:", err);
     throw err;
@@ -36,6 +47,8 @@ const login = async (username, password) => {
 
 const logout = () => {
   db.setSetting('auth_token', '');
+  db.setSetting('logged_in_user', '');
+  db.setSetting('logged_in_username', '');
   // Stop background sync
   if (syncTimer) {
     clearInterval(syncTimer);

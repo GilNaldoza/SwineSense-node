@@ -26,13 +26,13 @@ const createWindow = () => {
 
 app.whenReady().then(() => {
   database.initDb();
-  createWindow();
 
-  // --- Auto-Start Sync if Logged In ---
-  if (database.getSetting('auth_token')) {
-    syncManager.startBackgroundSync(); // Default 5 mins
-    syncManager.startSignalListener();
-  }
+  // Always require fresh login on startup so we know who is using the scanner
+  database.setSetting('auth_token', '');
+  database.setSetting('logged_in_user', '');
+  database.setSetting('logged_in_username', '');
+
+  createWindow();
 
   // --- Database IPC Handlers ---
   ipcMain.handle('db:get-user', (event, rfid) => {
@@ -183,9 +183,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('auth:check', () => {
     const token = database.getSetting('auth_token');
-    // Also include node_id so UI knows who is logged in
     const nodeId = database.getSetting('node_id');
-    return { authenticated: !!token, nodeId };
+    const loggedInUser = database.getSetting('logged_in_user');
+    return { authenticated: !!token, nodeId, loggedInUser };
   });
 
   ipcMain.handle('sync:perform', async () => {
