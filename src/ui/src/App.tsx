@@ -282,6 +282,16 @@ function App() {
         }
 
         setStatus("complete");
+
+        // Start an auto-reset timer so the UI returns to idle after a short period.
+        // We show a progress bar in `UserProfile` when `resetDuration` is set.
+        const AUTO_RESET_MS = 8000; // 8 seconds
+        setResetDuration(AUTO_RESET_MS);
+        // clear any previous timeout and create a new one
+        clearAutoReset();
+        resetTimeoutRef.current = setTimeout(() => {
+          handleReset();
+        }, AUTO_RESET_MS);
       } catch (err) {
         console.error("Error processing scan:", err);
         setStatus("idle");
@@ -340,7 +350,8 @@ function App() {
   if (isAuthenticated === false) {
     return (
       <LoginScreen
-        onLoginSuccess={async () => {
+        onLoginSuccess={async (name?: string) => {
+          if (name) setLoggedInUser(name);
           await refreshAuth();
         }}
       />
@@ -354,7 +365,7 @@ function App() {
         <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between">
           {/* Logged-in user display */}
           <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="w-7 h-7 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-7 h-7 bg-linear-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
               {loggedInUser ? loggedInUser.charAt(0).toUpperCase() : "?"}
             </div>
             <span className="text-sm font-medium text-slate-700">
@@ -401,7 +412,7 @@ function App() {
       <div className="w-full max-w-lg">
         {/* State: Idle or Scanning */}
         {status !== "complete" && (
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden min-h-[400px] flex flex-col items-center justify-center relative">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden min-h-100 flex flex-col items-center justify-center relative">
             <StatusDisplay status={status} />
           </div>
         )}

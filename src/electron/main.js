@@ -153,6 +153,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:set', (event, key, value) => {
     database.setSetting(key, value);
+    // If core sync settings changed, nudge the sync manager to reconnect
+    try {
+      if (key === 'grpc_server_address' || key === 'node_id') {
+        // Restart or prompt signal listener to pick up new config
+        syncManager.startSignalListener();
+      }
+    } catch (err) {
+      console.error('Failed to notify sync manager of settings change:', err);
+    }
+
     return { success: true };
   });
 
@@ -164,6 +174,8 @@ app.whenReady().then(() => {
         // Start sync processes on successful login
         syncManager.startBackgroundSync();
         syncManager.startSignalListener();
+        const loggedInUser = database.getSetting('logged_in_user');
+        return { success, loggedInUser };
       }
       return { success };
     } catch (err) {

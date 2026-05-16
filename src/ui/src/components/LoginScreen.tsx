@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (loggedInUser?: string) => void;
 }
 
 export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
@@ -28,7 +28,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     try {
       const result = await window.electron.login({ username, password });
       if (result.success) {
-        onLoginSuccess();
+        onLoginSuccess(result.loggedInUser);
       } else {
         setError(result.error || "Login failed");
       }
@@ -173,9 +173,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
               <Server size={14} className="text-blue-600" />
             </div>
-            <span className="font-medium">
-              Connects to SwineSense Backend
-            </span>
+            <span className="font-medium">Connects to SwineSense Backend</span>
           </div>
         </div>
       </div>

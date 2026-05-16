@@ -85,7 +85,7 @@ export function UserForm({
 }: UserFormProps) {
   // In SwineSense, all new unknown RFIDs belong to pigs by default.
   const isPigData =
-    !initialData || ("pig_number" in initialData || "pig_type" in initialData);
+    !initialData || "pig_number" in initialData || "pig_type" in initialData;
 
   const [userFormData, setUserFormData] = useState({
     firstName: (initialData as UserInitialData)?.first_name || "",
@@ -211,7 +211,7 @@ export function UserForm({
     return (
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/30">
+        <div className="p-6 border-b border-slate-100 bg-linear-to-r from-slate-50 to-blue-50/30">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <div
@@ -382,7 +382,7 @@ export function UserForm({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <Hash size={16} className="text-slate-400" />
                   {userFormData.userType === "faculty"
                     ? "Faculty ID"
@@ -413,7 +413,7 @@ export function UserForm({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <Mail size={16} className="text-slate-400" />
                   Email Address
                 </label>
@@ -484,7 +484,7 @@ export function UserForm({
                 </h3>
               </div>
 
-              <div className="p-5 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl border-2 border-slate-100 space-y-4">
+              <div className="p-5 bg-linear-to-br from-slate-50 to-blue-50/30 rounded-xl border-2 border-slate-100 space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-sm font-semibold text-slate-700">
                     College{" "}
@@ -579,7 +579,7 @@ export function UserForm({
             <button
               type="submit"
               onClick={handleSubmit}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+              className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
             >
               <Save size={20} />
               {isNewUser ? "Register User" : "Save Changes"}
@@ -604,7 +604,7 @@ export function UserForm({
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-green-50 to-blue-50/30">
+      <div className="p-6 border-b border-slate-100 bg-linear-to-r from-green-50 to-blue-50/30">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-green-100">
@@ -697,7 +697,7 @@ export function UserForm({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <Calendar size={16} className="text-slate-400" />
                   Date of Birth <span className="text-red-500">*</span>
                 </label>
@@ -770,7 +770,7 @@ export function UserForm({
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <Weight size={16} className="text-slate-400" />
                   Weight (kg)
                 </label>
@@ -877,7 +877,7 @@ export function UserForm({
           <button
             type="submit"
             onClick={handleSubmit}
-            className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+            className="flex-1 bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
           >
             <Save size={20} />
             {isNewUser ? "Register Pig" : "Save Changes"}

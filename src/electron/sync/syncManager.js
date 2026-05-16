@@ -1,17 +1,40 @@
 const db = require('../database');
 const { getClient } = require('./client');
 
-// TODO: Make this configurable via UI or config file
-const SERVER_ADDRESS = 'localhost:50060';
-const client = getClient(SERVER_ADDRESS);
+const DEFAULT_SERVER_ADDRESS = 'localhost:50060';
+let grpcServerAddress = db.getSetting('grpc_server_address') || DEFAULT_SERVER_ADDRESS;
+let client = getClient(grpcServerAddress);
 let isSyncing = false;
 let syncTimer = null;
 let signalStream = null;
 
+const createGrpcClient = (address) => {
+  console.log(`Creating gRPC client for ${address}`);
+  return getClient(address);
+};
+
+const ensureGrpcClient = () => {
+  const configuredAddress = db.getSetting('grpc_server_address') || DEFAULT_SERVER_ADDRESS;
+  if (configuredAddress !== grpcServerAddress || !client) {
+    grpcServerAddress = configuredAddress;
+    client = createGrpcClient(grpcServerAddress);
+    if (signalStream) {
+      try {
+        signalStream.cancel();
+      } catch (e) {
+        // ignore cancellation errors
+      }
+      signalStream = null;
+    }
+  }
+  return client;
+};
+
 // Helper to promisify gRPC calls
 const rpc = (method, ...args) => {
+  const activeClient = ensureGrpcClient();
   return new Promise((resolve, reject) => {
-    method.call(client, ...args, (err, response) => {
+    method.call(activeClient, ...args, (err, response) => {
       if (err) reject(err);
       else resolve(response);
     });
@@ -290,7 +313,8 @@ const startSignalListener = () => {
   }
 
   console.log("Connecting to signal stream...");
-  signalStream = client.ListenForSignals({ node_id: nodeId, token });
+  const activeClient = ensureGrpcClient();
+  signalStream = activeClient.ListenForSignals({ node_id: nodeId, token });
 
   signalStream.on('data', (message) => {
     console.log("Received signal:", message);
