@@ -409,14 +409,6 @@ function App() {
         {/* State: Complete (Show Profile or Form) */}
         {status === "complete" && scannedUid && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Back button for admin convenience */}
-            <button
-              onClick={handleReset}
-              className="mb-4 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
-            >
-              <span>←</span> Done
-            </button>
-
             {isEditing ? (
               <UserForm
                 uid={scannedUid}
@@ -530,7 +522,7 @@ function App() {
                   )}
                 </div>
 
-                <div className="mt-6 flex gap-3">
+                <div className="mt-6 flex flex-col gap-3">
                   <button
                     onClick={() => {
                       clearAutoReset();
@@ -540,6 +532,12 @@ function App() {
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all"
                   >
                     Edit Pig
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl transition-all"
+                  >
+                    Done
                   </button>
                 </div>
               </div>
