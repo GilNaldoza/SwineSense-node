@@ -26,7 +26,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setError(null);
 
     try {
-      const result = await window.electron.login({ username, password });
+      const result: any = await window.electron.login({ username, password });
       if (result.success) {
         onLoginSuccess(result.loggedInUser);
       } else {
@@ -41,7 +41,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-blue-100 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl animate-pulse"></div>
@@ -52,7 +52,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       {/* Main login card */}
       <div className="relative bg-white/80 backdrop-blur-xl p-10 rounded-3xl shadow-2xl w-full max-w-md border border-white/50 animate-in fade-in zoom-in-95 duration-700">
         {/* Decorative top accent */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 rounded-t-3xl"></div>
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-500 via-indigo-500 to-blue-600 rounded-t-3xl"></div>
 
         {/* Logo and header */}
         <div className="flex flex-col items-center mb-10">
@@ -61,11 +61,11 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <div className="absolute inset-0 bg-blue-400 rounded-full blur-2xl opacity-40 animate-pulse"></div>
             <div className="absolute inset-0 bg-blue-300 rounded-full blur-xl opacity-30"></div>
             {/* Icon container */}
-            <div className="relative w-24 h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl transform hover:scale-105 transition-transform duration-300">
+            <div className="relative w-24 h-24 bg-linear-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-2xl transform hover:scale-105 transition-transform duration-300">
               <Lock size={40} strokeWidth={2} className="drop-shadow-lg" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-pink-600 bg-clip-text text-transparent mb-2 tracking-tight">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-pink-500 to-pink-600 bg-clip-text text-transparent mb-2 tracking-tight">
             SwineSense
           </h1>
           <p className="text-slate-600 text-sm font-medium">
@@ -145,10 +145,10 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <button
             type="submit"
             disabled={loading}
-            className="group w-full bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden"
+            className="group w-full bg-linear-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden"
           >
             {/* Shimmer effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
             {loading ? (
               <>
@@ -170,7 +170,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         {/* Footer info */}
         <div className="mt-10 pt-6 border-t border-slate-200/50 text-center">
           <div className="flex items-center justify-center gap-2.5 text-xs text-slate-600">
-            <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+            <div className="p-2 bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
               <Server size={14} className="text-blue-600" />
             </div>
             <span className="font-medium">Connects to SwineSense Backend</span>
