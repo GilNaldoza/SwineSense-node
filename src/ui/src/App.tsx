@@ -18,7 +18,11 @@ declare global {
         username: string;
         password: string;
       }) => Promise<{ success: boolean; error?: string }>;
-      checkAuth: () => Promise<{ authenticated: boolean; nodeId: string; loggedInUser: string }>;
+      checkAuth: () => Promise<{
+        authenticated: boolean;
+        nodeId: string;
+        loggedInUser: string;
+      }>;
       sync: () => Promise<{ success: boolean; error?: string }>;
       logout: () => Promise<{ success: boolean; error?: string }>;
       logEntry: (entry: {
@@ -98,13 +102,22 @@ function App() {
   // Use generic type for timeout compatible with both Node and Browser
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const refreshAuth = useCallback(async () => {
+    try {
+      const res = await window.electron.checkAuth();
+      setIsAuthenticated(res.authenticated);
+      setLoggedInUser(res.loggedInUser || "");
+    } catch (err) {
+      console.error("Failed to refresh auth state:", err);
+      setIsAuthenticated(false);
+      setLoggedInUser("");
+    }
+  }, []);
+
   useEffect(() => {
     // Check authentication on mount
-    window.electron.checkAuth().then((res) => {
-      setIsAuthenticated(res.authenticated);
-      if (res.loggedInUser) setLoggedInUser(res.loggedInUser);
-    });
-  }, []);
+    refreshAuth();
+  }, [refreshAuth]);
 
   const clearAutoReset = useCallback(() => {
     if (resetTimeoutRef.current) {
@@ -152,6 +165,7 @@ function App() {
   const handleLogout = async () => {
     await window.electron.logout();
     setIsAuthenticated(false);
+    setLoggedInUser("");
   };
 
   const handleSaveUser = async (formData: UserFormData) => {
@@ -178,13 +192,7 @@ function App() {
           await recordEntry(savedUser);
           setCurrentUser(savedUser);
           setIsEditing(false);
-          setResetDuration(2000);
-
-          // Auto-return to reader after showing the profile briefly
-          clearAutoReset();
-          resetTimeoutRef.current = setTimeout(() => {
-            handleReset();
-          }, 2000);
+          setResetDuration(undefined);
         }
       }
     } catch (err) {
@@ -218,13 +226,7 @@ function App() {
           if (savedPig) {
             setCurrentPig(savedPig);
             setIsEditing(false);
-            setResetDuration(2000);
-
-            // Auto-return to reader after showing the profile briefly
-            clearAutoReset();
-            resetTimeoutRef.current = setTimeout(() => {
-              handleReset();
-            }, 2000);
+            setResetDuration(undefined);
           }
         }
       } catch (err) {
@@ -252,10 +254,7 @@ function App() {
           setCurrentPig(pig);
           setCurrentUser(null);
           setIsEditing(false);
-          setResetDuration(4000);
-          resetTimeoutRef.current = setTimeout(() => {
-            handleReset();
-          }, 4000);
+          setResetDuration(undefined);
         } else {
           // Not a pig — check if it's an old LENS user
           const user = await window.electron.getUser(uid);
@@ -265,7 +264,10 @@ function App() {
             // Treat as a new pig: show pig registration form with RFID pre-filled.
             // The old LENS data stays in the users table but the scanner
             // now routes everything through the pig workflow.
-            console.log("LENS user found for RFID, routing to pig registration:", uid);
+            console.log(
+              "LENS user found for RFID, routing to pig registration:",
+              uid,
+            );
             setCurrentUser(null);
             setCurrentPig(null);
             setResetDuration(undefined);
@@ -336,7 +338,13 @@ function App() {
   }
 
   if (isAuthenticated === false) {
-    return <LoginScreen onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return (
+      <LoginScreen
+        onLoginSuccess={async () => {
+          await refreshAuth();
+        }}
+      />
+    );
   }
 
   return (
@@ -349,37 +357,39 @@ function App() {
             <div className="w-7 h-7 bg-gradient-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
               {loggedInUser ? loggedInUser.charAt(0).toUpperCase() : "?"}
             </div>
-            <span className="text-sm font-medium text-slate-700">{loggedInUser || "Unknown"}</span>
+            <span className="text-sm font-medium text-slate-700">
+              {loggedInUser || "Unknown"}
+            </span>
           </div>
           <div className="flex gap-2">
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 text-slate-600 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-sm transition-all hover:shadow-md"
-            title="Settings"
-          >
-            <Settings size={20} />
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 rounded-lg border border-red-200 shadow-sm transition-all hover:shadow-md"
-          >
-            <span className="mb-px">Logout</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-slate-600 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-sm transition-all hover:shadow-md"
+              title="Settings"
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" x2="9" y1="12" y2="12" />
-            </svg>
-          </button>
+              <Settings size={20} />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 rounded-lg border border-red-200 shadow-sm transition-all hover:shadow-md"
+            >
+              <span className="mb-px">Logout</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" x2="9" y1="12" y2="12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -404,7 +414,7 @@ function App() {
               onClick={handleReset}
               className="mb-4 text-sm text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
             >
-              <span>←</span> Back to Reader
+              <span>←</span> Done
             </button>
 
             {isEditing ? (
