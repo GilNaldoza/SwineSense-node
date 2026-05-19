@@ -17,7 +17,11 @@ declare global {
       login: (creds: {
         username: string;
         password: string;
-      }) => Promise<{ success: boolean; error?: string }>;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+        loggedInUser?: string;
+      }>;
       checkAuth: () => Promise<{
         authenticated: boolean;
         nodeId: string;

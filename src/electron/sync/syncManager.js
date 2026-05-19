@@ -1,3 +1,4 @@
+const grpc = require('@grpc/grpc-js');
 const db = require('../database');
 const { getClient } = require('./client');
 
@@ -7,6 +8,12 @@ let client = getClient(grpcServerAddress);
 let isSyncing = false;
 let syncTimer = null;
 let signalStream = null;
+
+const createMetadata = (token) => {
+  const metadata = new grpc.Metadata();
+  if (token) metadata.add('token', token);
+  return metadata;
+};
 
 const createGrpcClient = (address) => {
   console.log(`Creating gRPC client for ${address}`);
@@ -138,8 +145,7 @@ const performSync = async () => {
       // Let's assume Metadata or add token to the message? The proto for PushUsers takes UserList.
       // Let's use Metadata.
       
-      const metadata = new (require('@grpc/grpc-js').Metadata)();
-      metadata.add('token', token);
+      const metadata = createMetadata(token);
 
       const response = await new Promise((resolve, reject) => {
           client.PushUsers(userList, metadata, (err, res) => {
@@ -220,8 +226,7 @@ const performSync = async () => {
       console.log(`Pushing ${localPigs.length} local pig changes...`);
       
       const pigList = { pigs: localPigs }; 
-      const metadata = new (require('@grpc/grpc-js').Metadata)();
-      metadata.add('token', token);
+      const metadata = createMetadata(token);
 
       const response = await new Promise((resolve, reject) => {
           client.PushPigs(pigList, metadata, (err, res) => {
