@@ -1,5 +1,5 @@
 {
-  "name": "lens-reader-node",
+  "name": "swinesense-scanner",
   "version": "1.0.0",
   "description": "",
   "main": "src/electron/main.js",
@@ -9,6 +9,7 @@
     "dev": "concurrently \"npm run dev:ui\" \"wait-on tcp:5174 && npm run dev:electron\"",
     "build:ui": "npm run build --prefix src/ui",
     "start": "npm run build:ui && electron .",
+    "simulate:scan": "node src/electron/tools/simulateScan.js",
     "rebuild": "electron-rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

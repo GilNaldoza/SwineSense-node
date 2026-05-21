@@ -108,6 +108,13 @@ function App() {
 
   const refreshAuth = useCallback(async () => {
     try {
+      if (typeof window === 'undefined' || !window.electron || !window.electron.checkAuth) {
+        // Not running inside Electron - treat as unauthenticated in browser/dev
+        setIsAuthenticated(false);
+        setLoggedInUser('');
+        return;
+      }
+
       const res = await window.electron.checkAuth();
       setIsAuthenticated(res.authenticated);
       setLoggedInUser(res.loggedInUser || "");
@@ -133,6 +140,8 @@ function App() {
   const recordEntry = useCallback(async (user: User) => {
     if (!user.user_id) return;
     try {
+      if (!window?.electron?.logEntry) return;
+
       await window.electron.logEntry({
         userId: user.user_id,
         entryTimestamp: new Date().toISOString(),
@@ -147,6 +156,8 @@ function App() {
   const recordPigScan = useCallback(async (pig: Pig) => {
     if (!pig.rfid_tag) return;
     try {
+      if (!window?.electron?.logPigScan) return;
+
       await window.electron.logPigScan({
         rfidTag: pig.rfid_tag,
         timestamp: new Date().toISOString(),
@@ -167,7 +178,9 @@ function App() {
   }, [clearAutoReset]);
 
   const handleLogout = async () => {
-    await window.electron.logout();
+    if (window?.electron?.logout) {
+      await window.electron.logout();
+    }
     setIsAuthenticated(false);
     setLoggedInUser("");
   };
@@ -286,22 +299,12 @@ function App() {
         }
 
         setStatus("complete");
-
-        // Start an auto-reset timer so the UI returns to idle after a short period.
-        // We show a progress bar in `UserProfile` when `resetDuration` is set.
-        const AUTO_RESET_MS = 8000; // 8 seconds
-        setResetDuration(AUTO_RESET_MS);
-        // clear any previous timeout and create a new one
-        clearAutoReset();
-        resetTimeoutRef.current = setTimeout(() => {
-          handleReset();
-        }, AUTO_RESET_MS);
       } catch (err) {
         console.error("Error processing scan:", err);
         setStatus("idle");
       }
     },
-    [clearAutoReset, recordPigScan, handleReset],
+    [clearAutoReset, recordPigScan],
   );
 
   // --- Keyboard Scanner Listener ---
@@ -443,17 +446,24 @@ function App() {
                 }
               />
             ) : currentUser ? (
-              <UserProfile
-                uid={scannedUid}
-                data={currentUser}
-                onEdit={() => {
-                  // If user manually edits, cancel the auto-reset
-                  clearAutoReset();
-                  setResetDuration(undefined);
-                  setIsEditing(true);
-                }}
-                autoResetDuration={resetDuration}
-              />
+              <>
+                <UserProfile
+                  uid={scannedUid}
+                  data={currentUser}
+                  onEdit={() => {
+                    clearAutoReset();
+                    setResetDuration(undefined);
+                    setIsEditing(true);
+                  }}
+                  autoResetDuration={resetDuration}
+                />
+                <button
+                  onClick={handleReset}
+                  className="mt-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl transition-all"
+                >
+                  Done
+                </button>
+              </>
             ) : currentPig ? (
               <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
@@ -474,15 +484,16 @@ function App() {
                       <label className="text-sm font-semibold text-slate-600">
                         Type
                       </label>
-                      <p className="text-slate-800 capitalize">
-                        {currentPig.pig_type}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-slate-600">
-                        Pen
-                      </label>
-                      <p className="text-slate-800">{currentPig.pen}</p>
+                            if (window?.electron?.saveUser) await window.electron.saveUser(userToSave);
+                            // Show the saved profile briefly
+                            let savedUser = null as User | null;
+                            if (window?.electron?.getUser) savedUser = await window.electron.getUser(scannedUid);
+                            if (savedUser) {
+                              await recordEntry(savedUser);
+                              setCurrentUser(savedUser);
+                              setIsEditing(false);
+                              setResetDuration(undefined);
+                            }
                     </div>
                   </div>
 

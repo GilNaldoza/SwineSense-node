@@ -1,8 +1,17 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const { app } = require('electron');
 
-const dbPath = path.join(app.getPath('userData'), 'lens.db');
+// Migrate from legacy lens.db to swinesense.db if needed
+const oldDbPath = path.join(app.getPath('userData'), 'lens.db');
+const newDbPath = path.join(app.getPath('userData'), 'swinesense.db');
+if (fs.existsSync(oldDbPath) && !fs.existsSync(newDbPath)) {
+  console.log('Migrating database from lens.db to swinesense.db...');
+  fs.copyFileSync(oldDbPath, newDbPath);
+  console.log('Database migrated successfully.');
+}
+const dbPath = newDbPath;
 const db = new Database(dbPath/*, { verbose: console.log } */);
 
 const initDb = () => {
@@ -279,19 +288,7 @@ const logEntry = (entry) => {
   return stmt.run(entry);
 };
 
-const getDepartmentsByCollege = (collegeName) => {
-  const stmt = db.prepare(`
-    SELECT d.name 
-    FROM departments d
-    JOIN colleges c ON d.college_id = c.college_id
-    WHERE c.name = ?
-  `);
-  return stmt.all(collegeName).map(row => row.name);
-};
 
-const getAllColleges = () => {
-  return db.prepare('SELECT name FROM colleges').all().map(row => row.name);
-};
 
 // --- Pig Helpers ---
 const getPigByRfid = (rfid) => {

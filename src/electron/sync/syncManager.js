@@ -37,11 +37,23 @@ const ensureGrpcClient = () => {
   return client;
 };
 
-// Helper to promisify gRPC calls
-const rpc = (method, ...args) => {
+// Helper to promisify gRPC calls (message-only)
+const rpc = (method, message) => {
   const activeClient = ensureGrpcClient();
   return new Promise((resolve, reject) => {
-    method.call(activeClient, ...args, (err, response) => {
+    method.call(activeClient, message, (err, response) => {
+      if (err) reject(err);
+      else resolve(response);
+    });
+  });
+};
+
+// Helper to call methods with metadata (for auth token)
+const rpcWithMeta = (method, message, token) => {
+  const activeClient = ensureGrpcClient();
+  const metadata = createMetadata(token);
+  return new Promise((resolve, reject) => {
+    method.call(activeClient, message, metadata, (err, response) => {
       if (err) reject(err);
       else resolve(response);
     });
@@ -113,7 +125,7 @@ const performSync = async () => {
     console.log("Pulling users since:", lastSync);
     
     // We get a payload potentially containing 'users' array
-    const response = await rpc(client.PullUsers, { last_sync_timestamp: lastSync, token });
+    const response = await rpcWithMeta(client.PullUsers, { last_sync_timestamp: lastSync }, token);
     const users = response.users || [];
     
     if (users.length > 0) {
@@ -184,7 +196,7 @@ const performSync = async () => {
         token
       };
 
-      const response = await rpc(client.PushLogs, logBatch);
+      const response = await rpcWithMeta(client.PushLogs, logBatch, token);
       
       console.log("PushLogs response:", response);
 
@@ -205,7 +217,7 @@ const performSync = async () => {
     const lastSyncPigs = db.getSetting('last_sync_pigs_timestamp') || '1970-01-01T00:00:00Z';
     console.log("Pulling pigs since:", lastSyncPigs);
     
-    const response = await rpc(client.PullPigs, { last_sync_timestamp: lastSyncPigs, token });
+    const response = await rpcWithMeta(client.PullPigs, { last_sync_timestamp: lastSyncPigs }, token);
     const pigs = response.pigs || [];
     
     if (pigs.length > 0) {
@@ -228,12 +240,7 @@ const performSync = async () => {
       const pigList = { pigs: localPigs }; 
       const metadata = createMetadata(token);
 
-      const response = await new Promise((resolve, reject) => {
-          client.PushPigs(pigList, metadata, (err, res) => {
-              if (err) reject(err);
-              else resolve(res);
-          });
-      });
+        const response = await rpcWithMeta(client.PushPigs, pigList, token);
 
       if (response.success) {
         const ids = localPigs.map(p => p.rfid_tag);
@@ -261,7 +268,7 @@ const performSync = async () => {
         token
       };
 
-      const response = await rpc(client.PushPigScans, scanBatch);
+      const response = await rpcWithMeta(client.PushPigScans, scanBatch, token);
       
       console.log("PushPigScans response:", response);
 
