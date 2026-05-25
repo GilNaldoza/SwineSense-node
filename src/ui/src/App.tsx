@@ -488,12 +488,12 @@ function App() {
                             // Show the saved profile briefly
                             let savedUser = null as User | null;
                             if (window?.electron?.getUser) savedUser = await window.electron.getUser(scannedUid);
-                            if (savedUser) {
+                            if (savedUser) 
                               await recordEntry(savedUser);
                               setCurrentUser(savedUser);
                               setIsEditing(false);
                               setResetDuration(undefined);
-                            }
+                            
                     </div>
                   </div>
 
