@@ -1,10 +1,15 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+
 const database = require('./database');
-const syncManager = require('./sync/syncManager');
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// IMPORTANT: Initialize database BEFORE loading syncManager
+database.initDb();
+
+// Load syncManager only after DB initialization
+const syncManager = require('./sync/syncManager');
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -23,11 +28,9 @@ const createWindow = () => {
   }
 };
 
-
 app.whenReady().then(() => {
-  database.initDb();
 
-  // Always require fresh login on startup so we know who is using the scanner
+  // Always require fresh login on startup
   database.setSetting('auth_token', '');
   database.setSetting('logged_in_user', '');
   database.setSetting('logged_in_username', '');
@@ -35,17 +38,15 @@ app.whenReady().then(() => {
   createWindow();
 
   // --- Database IPC Handlers ---
+
   ipcMain.handle('db:get-user', (event, rfid) => {
     return database.getUserByRfid(rfid);
   });
 
   ipcMain.handle('db:save-user', (event, user) => {
     try {
-      // Ensure we have the RFID tag regardless of casing
       const rfid = user.rfid_tag || user.rfidTag;
-      
-      // Map keys to match database bind parameters (camelCase) if they are snake_case
-      // This ensures compatibility with both the React form and database.js expectations
+
       const userForDb = {
         idNumber: user.id_number || user.idNumber,
         rfidTag: rfid,
@@ -64,9 +65,10 @@ app.whenReady().then(() => {
       } else {
         database.createUser(userForDb);
       }
-      
-      // Trigger immediate sync for this new/updated user
-      syncManager.performSync().catch(err => console.error("Post-save sync failed:", err));
+
+      syncManager.performSync().catch(err =>
+        console.error("Post-save sync failed:", err)
+      );
 
       return { success: true };
     } catch (err) {
@@ -81,10 +83,8 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:save-pig', (event, pig) => {
     try {
-      // Ensure we have the RFID tag regardless of casing
       const rfid = pig.rfid_tag || pig.rfidTag;
-      
-      // Map keys to match database bind parameters (camelCase) if they are snake_case
+
       const pigForDb = {
         rfidTag: rfid,
         pigNumber: pig.pig_number || pig.pigNumber,
@@ -103,9 +103,10 @@ app.whenReady().then(() => {
       } else {
         database.createPig(pigForDb);
       }
-      
-      // Trigger immediate sync for this new/updated pig
-      syncManager.performSync().catch(err => console.error("Post-save sync failed:", err));
+
+      syncManager.performSync().catch(err =>
+        console.error("Post-save sync failed:", err)
+      );
 
       return { success: true };
     } catch (err) {
@@ -116,13 +117,17 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:log-entry', (event, entry) => {
     try {
-      // Inject location from settings if not provided
       if (!entry.location) {
-        entry.location = database.getSetting('location_name') || 'Main Library';
+        entry.location =
+          database.getSetting('location_name') || 'Main Library';
       }
+
       database.logEntry(entry);
-      // Trigger immediate sync to push the new log
-      syncManager.performSync().catch(err => console.error("Post-log sync failed:", err));
+
+      syncManager.performSync().catch(err =>
+        console.error("Post-log sync failed:", err)
+      );
+
       return { success: true };
     } catch (err) {
       console.error("DB Log Error:", err);
@@ -132,13 +137,17 @@ app.whenReady().then(() => {
 
   ipcMain.handle('db:log-pig-scan', (event, scan) => {
     try {
-      // Inject location from settings if not provided
       if (!scan.location) {
-        scan.location = database.getSetting('location_name') || 'Farrowing Pen';
+        scan.location =
+          database.getSetting('location_name') || 'Farrowing Pen';
       }
+
       database.logPigScan(scan);
-      // Trigger immediate sync to push the new log
-      syncManager.performSync().catch(err => console.error("Post-scan sync failed:", err));
+
+      syncManager.performSync().catch(err =>
+        console.error("Post-scan sync failed:", err)
+      );
+
       return { success: true };
     } catch (err) {
       console.error("DB Pig Scan Log Error:", err);
@@ -147,36 +156,44 @@ app.whenReady().then(() => {
   });
 
   // --- Settings IPC Handlers ---
+
   ipcMain.handle('settings:get', (event, key) => {
     return database.getSetting(key);
   });
 
   ipcMain.handle('settings:set', (event, key, value) => {
     database.setSetting(key, value);
-    // If core sync settings changed, nudge the sync manager to reconnect
+
     try {
       if (key === 'grpc_server_address' || key === 'node_id') {
-        // Restart or prompt signal listener to pick up new config
         syncManager.startSignalListener();
       }
     } catch (err) {
-      console.error('Failed to notify sync manager of settings change:', err);
+      console.error(
+        'Failed to notify sync manager of settings change:',
+        err
+      );
     }
 
     return { success: true };
   });
 
-  // --- Sync IPC Handlers ---
+  // --- Authentication IPC Handlers ---
+
   ipcMain.handle('auth:login', async (event, { username, password }) => {
     try {
       const success = await syncManager.login(username, password);
+
       if (success) {
-        // Start sync processes on successful login
         syncManager.startBackgroundSync();
         syncManager.startSignalListener();
-        const loggedInUser = database.getSetting('logged_in_user');
+
+        const loggedInUser =
+          database.getSetting('logged_in_user');
+
         return { success, loggedInUser };
       }
+
       return { success };
     } catch (err) {
       return { success: false, error: err.message };
@@ -197,7 +214,12 @@ app.whenReady().then(() => {
     const token = database.getSetting('auth_token');
     const nodeId = database.getSetting('node_id');
     const loggedInUser = database.getSetting('logged_in_user');
-    return { authenticated: !!token, nodeId, loggedInUser };
+
+    return {
+      authenticated: !!token,
+      nodeId,
+      loggedInUser
+    };
   });
 
   ipcMain.handle('sync:perform', async () => {
@@ -210,10 +232,14 @@ app.whenReady().then(() => {
   });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });

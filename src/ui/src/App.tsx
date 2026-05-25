@@ -89,32 +89,25 @@ interface Pig {
 }
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = loading
-  const [status, setStatus] = useState<"idle" | "scanning" | "complete">(
-    "idle",
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<"idle" | "scanning" | "complete">("idle");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentPig, setCurrentPig] = useState<Pig | null>(null);
   const [scannedUid, setScannedUid] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [resetDuration, setResetDuration] = useState<number | undefined>(
-    undefined,
-  );
+  const [resetDuration, setResetDuration] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<string>("");
 
-  // Use generic type for timeout compatible with both Node and Browser
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshAuth = useCallback(async () => {
     try {
-      if (typeof window === 'undefined' || !window.electron || !window.electron.checkAuth) {
-        // Not running inside Electron - treat as unauthenticated in browser/dev
+      if (typeof window === "undefined" || !window.electron || !window.electron.checkAuth) {
         setIsAuthenticated(false);
-        setLoggedInUser('');
+        setLoggedInUser("");
         return;
       }
-
       const res = await window.electron.checkAuth();
       setIsAuthenticated(res.authenticated);
       setLoggedInUser(res.loggedInUser || "");
@@ -126,7 +119,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Check authentication on mount
     refreshAuth();
   }, [refreshAuth]);
 
@@ -141,7 +133,6 @@ function App() {
     if (!user.user_id) return;
     try {
       if (!window?.electron?.logEntry) return;
-
       await window.electron.logEntry({
         userId: user.user_id,
         entryTimestamp: new Date().toISOString(),
@@ -157,7 +148,6 @@ function App() {
     if (!pig.rfid_tag) return;
     try {
       if (!window?.electron?.logPigScan) return;
-
       await window.electron.logPigScan({
         rfidTag: pig.rfid_tag,
         timestamp: new Date().toISOString(),
@@ -186,7 +176,6 @@ function App() {
   };
 
   const handleSaveUser = async (formData: UserFormData) => {
-    // Convert camelCase form data to snake_case DB schema
     const userToSave: User = {
       id_number: formData.idNumber,
       rfid_tag: scannedUid || "",
@@ -203,7 +192,6 @@ function App() {
     try {
       if (scannedUid) {
         await window.electron.saveUser(userToSave);
-        // Show the saved profile briefly
         const savedUser = await window.electron.getUser(scannedUid);
         if (savedUser) {
           await recordEntry(savedUser);
@@ -214,14 +202,11 @@ function App() {
       }
     } catch (err) {
       console.error("Error saving user:", err);
-      // In a real app we might show an error toast here
     }
   };
 
   const handleSavePig = async (formData: any) => {
-    // Check if this is pig data
     if ("pigNumber" in formData) {
-      // Convert camelCase form data to snake_case DB schema
       const pigToSave: Pig = {
         rfid_tag: scannedUid || "",
         pig_number: formData.pigNumber,
@@ -238,7 +223,6 @@ function App() {
       try {
         if (scannedUid) {
           await window.electron.savePig(pigToSave);
-          // Show the saved profile briefly
           const savedPig = await window.electron.getPig(scannedUid);
           if (savedPig) {
             setCurrentPig(savedPig);
@@ -248,22 +232,18 @@ function App() {
         }
       } catch (err) {
         console.error("Error saving pig:", err);
-        // In a real app we might show an error toast here
       }
     }
   };
 
-  // --- Scan Processing ---
   const processScan = useCallback(
     async (uid: string) => {
       clearAutoReset();
-
       setScannedUid(uid);
 
       try {
         console.log("Checking RFID:", uid);
 
-        // Check pigs FIRST (SwineSense system takes priority)
         const pig = await window.electron.getPig(uid);
 
         if (pig) {
@@ -273,24 +253,15 @@ function App() {
           setIsEditing(false);
           setResetDuration(undefined);
         } else {
-          // Not a pig — check if it's an old LENS user
           const user = await window.electron.getUser(uid);
 
           if (user) {
-            // LENS user found — but this is SwineSense now.
-            // Treat as a new pig: show pig registration form with RFID pre-filled.
-            // The old LENS data stays in the users table but the scanner
-            // now routes everything through the pig workflow.
-            console.log(
-              "LENS user found for RFID, routing to pig registration:",
-              uid,
-            );
+            console.log("LENS user found for RFID, routing to pig registration:", uid);
             setCurrentUser(null);
             setCurrentPig(null);
             setResetDuration(undefined);
             setIsEditing(true);
           } else {
-            // Completely new entity — show pig registration form
             setResetDuration(undefined);
             setCurrentUser(null);
             setCurrentPig(null);
@@ -307,8 +278,6 @@ function App() {
     [clearAutoReset, recordPigScan],
   );
 
-  // --- Keyboard Scanner Listener ---
-  // Use a ref to access the latest processScan without resetting the effect/buffer
   const processScanRef = useRef(processScan);
   useEffect(() => {
     processScanRef.current = processScan;
@@ -319,7 +288,6 @@ function App() {
     let timeout: ReturnType<typeof setTimeout>;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in a form field
       const target = e.target as HTMLElement;
       if (["INPUT", "TEXTAREA"].includes(target.tagName)) return;
 
@@ -331,7 +299,6 @@ function App() {
         }
       } else if (e.key.length === 1) {
         buffer += e.key;
-        // Clear buffer if typing is too slow (scanners are fast, but we allow 2s for manual testing)
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           buffer = "";
@@ -370,7 +337,6 @@ function App() {
       {/* Header Bar */}
       {isAuthenticated && (
         <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between">
-          {/* Logged-in user display */}
           <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
             <div className="w-7 h-7 bg-linear-to-br from-pink-500 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
               {loggedInUser ? loggedInUser.charAt(0).toUpperCase() : "?"}
@@ -415,7 +381,6 @@ function App() {
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
       {/* Main Container */}
-      {/* Main Container */}
       <div className="w-full max-w-lg">
         {/* State: Idle or Scanning */}
         {status !== "complete" && (
@@ -440,9 +405,7 @@ function App() {
                   }
                 }}
                 onCancel={() =>
-                  currentUser || currentPig
-                    ? setIsEditing(false)
-                    : handleReset()
+                  currentUser || currentPig ? setIsEditing(false) : handleReset()
                 }
               />
             ) : currentUser ? (
@@ -466,6 +429,7 @@ function App() {
               </>
             ) : currentPig ? (
               <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl p-6">
+                {/* Pig Profile Header */}
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2.5 rounded-xl bg-green-100">
                     <PiggyBank size={24} className="text-green-600" />
@@ -479,31 +443,38 @@ function App() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* Type & Pen */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-semibold text-slate-600">
                         Type
                       </label>
-                            if (window?.electron?.saveUser) await window.electron.saveUser(userToSave);
-                            // Show the saved profile briefly
-                            let savedUser = null as User | null;
-                            if (window?.electron?.getUser) savedUser = await window.electron.getUser(scannedUid);
-                            if (savedUser) 
-                              await recordEntry(savedUser);
-                              setCurrentUser(savedUser);
-                              setIsEditing(false);
-                              setResetDuration(undefined);
-                            
+                      <p className="text-slate-800 capitalize">
+                        {currentPig.pig_type}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-slate-600">
+                        Pen
+                      </label>
+                      <p className="text-slate-800">{currentPig.pen}</p>
                     </div>
                   </div>
 
+                  {/* Health Status & Weight */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-semibold text-slate-600">
                         Health Status
                       </label>
                       <p
-                        className={`capitalize ${currentPig.health_status === "healthy" ? "text-green-600" : currentPig.health_status === "at-risk" ? "text-yellow-600" : "text-red-600"}`}
+                        className={`capitalize ${
+                          currentPig.health_status === "healthy"
+                            ? "text-green-600"
+                            : currentPig.health_status === "at-risk"
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                        }`}
                       >
                         {currentPig.health_status}
                       </p>
@@ -513,13 +484,12 @@ function App() {
                         Weight
                       </label>
                       <p className="text-slate-800">
-                        {currentPig.weight
-                          ? `${currentPig.weight} kg`
-                          : "Not recorded"}
+                        {currentPig.weight ? `${currentPig.weight} kg` : "Not recorded"}
                       </p>
                     </div>
                   </div>
 
+                  {/* Sire */}
                   {currentPig.sire && (
                     <div>
                       <label className="text-sm font-semibold text-slate-600">
@@ -529,6 +499,7 @@ function App() {
                     </div>
                   )}
 
+                  {/* Dam */}
                   {currentPig.dam && (
                     <div>
                       <label className="text-sm font-semibold text-slate-600">
@@ -538,6 +509,19 @@ function App() {
                     </div>
                   )}
 
+                  {/* Date of Birth */}
+                  <div>
+                    <label className="text-sm font-semibold text-slate-600">
+                      Date of Birth
+                    </label>
+                    <p className="text-slate-800">
+                      {currentPig.date_of_birth
+                        ? new Date(currentPig.date_of_birth).toLocaleDateString()
+                        : "Not recorded"}
+                    </p>
+                  </div>
+
+                  {/* Notes */}
                   {currentPig.notes && (
                     <div>
                       <label className="text-sm font-semibold text-slate-600">
@@ -548,6 +532,7 @@ function App() {
                   )}
                 </div>
 
+                {/* Actions */}
                 <div className="mt-6 flex flex-col gap-3">
                   <button
                     onClick={() => {
