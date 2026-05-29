@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { StatusDisplay } from "./components/StatusDisplay";
 import { LoginScreen } from "./components/LoginScreen";
 import { SettingsModal } from "./components/SettingsModal";
-import { Settings, PiggyBank, Edit, RotateCcw } from "lucide-react";
+import { Settings, PiggyBank } from "lucide-react";
 
 // --- Types ---
 declare global {
